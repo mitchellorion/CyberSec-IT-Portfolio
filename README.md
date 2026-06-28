@@ -1,27 +1,36 @@
-# Hi, I'm Mitchell Beale 👋
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Welcome to my Cybersecurity & IT Portfolio!
+## Getting Started
 
-## About Me
-I’m Mitchell Beale, a passionate cybersecurity enthusiast and IT professional focused on defending digital environments and solving complex security challenges. My background combines hands-on technical skills with strategic risk management, enabling me to design secure systems and respond effectively to incidents.
+First, run the development server:
 
-## What I Do
-- Develop and implement cybersecurity frameworks  
-- Design secure network architectures  
-- Automate security processes with Python  
-- Analyze threats and model risks  
-- Conduct incident response and forensic investigations  
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## Skills & Tools
-- Linux & Windows Administration  
-- Network Security & Packet Analysis  
-- Python Scripting & Automation  
-- Audit & Risk Management Frameworks  
-- Monitoring & Alerting Systems (ELK, Splunk)  
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Let’s Connect
-Feel free to explore my projects and reach out if you want to collaborate or discuss cybersecurity!
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
----
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-*Thank you for visiting my portfolio!*
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
