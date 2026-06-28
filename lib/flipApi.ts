@@ -20,6 +20,12 @@ export interface Drop {
   odds: string;   // range string e.g. "0 - 99"
 }
 
+export interface RecentDrop {
+  name: string;
+  price: number;
+  image: string;
+}
+
 export interface LootboxDetail {
   _id: string;
   id: string;
@@ -28,6 +34,8 @@ export interface LootboxDetail {
   image: string;
   drops: Drop[];
   riskPercentage: number;
+  timesWagered: number;
+  recentDrops: RecentDrop[];
   type?: string;
 }
 
