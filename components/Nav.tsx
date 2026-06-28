@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Trophy, Search, Zap } from "lucide-react";
+import { BarChart3, Trophy, Zap } from "lucide-react";
 
 const links = [
-  { href: "/", label: "Search", icon: Search },
+  { href: "/", label: "Calculator", icon: BarChart3 },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
@@ -18,7 +18,7 @@ export default function Nav() {
         background: "var(--bg-card)",
         borderBottom: "1px solid var(--border)",
       }}
-      className="sticky top-0 z-50 backdrop-blur-sm"
+      className="sticky top-0 z-50"
     >
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
