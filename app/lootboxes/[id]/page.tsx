@@ -1,9 +1,15 @@
-import { getLootbox, calcEV, calcRTP } from "@/lib/flipApi";
+import { getLootbox, getAllLootboxes, calcEV, calcRTP } from "@/lib/flipApi";
 import { notFound } from "next/navigation";
+
+export async function generateStaticParams() {
+  const boxes = await getAllLootboxes();
+  return boxes.map((b) => ({ id: b.id }));
+}
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
-import { fmtUSD, fmt } from "@/lib/calc";
+import { ArrowLeft, TrendingUp, TrendingDown, Package, AlertTriangle, Flame } from "lucide-react";
+import { fmtUSD, fmt, fmtCompact } from "@/lib/calc";
+import imageOverrides from "@/public/lootbox-image-overrides.json";
 
 export const revalidate = 3600;
 
@@ -44,7 +50,7 @@ export default async function LootboxDetailPage({ params }: Props) {
         style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
       >
         <div className="relative w-28 h-28 shrink-0 rounded-xl overflow-hidden" style={{ background: "#0a0a14" }}>
-          <Image src={box.image} alt={box.name} fill className="object-contain p-2" unoptimized />
+          <Image src={(imageOverrides as Record<string, string>)[id] ?? box.image} alt={box.name} fill className="object-contain p-2" unoptimized />
         </div>
         <div className="flex flex-col gap-2 flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
@@ -69,6 +75,14 @@ export default async function LootboxDetailPage({ params }: Props) {
                 {box.riskPercentage.toFixed(2)}%
               </span>
             </span>
+            {box.timesWagered > 0 && (
+              <span style={{ color: "var(--text-muted)" }}>
+                All-time opens:{" "}
+                <span className="font-bold" style={{ color: "var(--text-primary)" }}>
+                  {box.timesWagered.toLocaleString()}
+                </span>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -114,6 +128,36 @@ export default async function LootboxDetailPage({ params }: Props) {
           />
         </div>
       </div>
+
+      {/* Recent drops */}
+      {box.recentDrops && box.recentDrops.length > 0 && (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+        >
+          <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--border)" }}>
+            <Flame size={13} style={{ color: "var(--red)" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Recent Drops
+            </h2>
+          </div>
+          <div className="flex gap-3 p-4 overflow-x-auto">
+            {box.recentDrops.map((drop, i) => (
+              <div key={i} className="shrink-0 flex flex-col items-center gap-1.5 w-20">
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden" style={{ background: "#0a0a14" }}>
+                  <Image src={drop.image} alt={drop.name} fill className="object-contain p-1" unoptimized />
+                </div>
+                <span className="text-xs text-center leading-tight" style={{ color: "var(--text-muted)" }}>
+                  {drop.name}
+                </span>
+                <span className="text-xs font-bold" style={{ color: "var(--green)" }}>
+                  {fmtUSD(drop.price)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Odds table */}
       <div
