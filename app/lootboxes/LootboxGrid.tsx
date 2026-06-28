@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Search, TrendingUp, Package } from "lucide-react";
 import type { LootboxSummary } from "@/lib/flipApi";
+import imageOverrides from "@/public/lootbox-image-overrides.json";
 
 type SortKey = "price_asc" | "price_desc" | "risk_asc" | "risk_desc" | "popular" | "items";
 
@@ -95,7 +96,7 @@ export default function LootboxGrid({ boxes }: { boxes: LootboxSummary[] }) {
             {/* Image */}
             <div className="relative w-full aspect-square" style={{ background: "#0a0a14" }}>
               <Image
-                src={box.image}
+                src={(imageOverrides as Record<string, string>)[box.id] ?? box.image}
                 alt={box.name}
                 fill
                 className="object-contain p-2"
