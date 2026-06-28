@@ -1,5 +1,10 @@
-import { getLootbox, calcEV, calcRTP } from "@/lib/flipApi";
+import { getLootbox, getAllLootboxes, calcEV, calcRTP } from "@/lib/flipApi";
 import { notFound } from "next/navigation";
+
+export async function generateStaticParams() {
+  const boxes = await getAllLootboxes();
+  return boxes.map((b) => ({ id: b.id }));
+}
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, TrendingUp, TrendingDown, Package, AlertTriangle, Flame } from "lucide-react";
