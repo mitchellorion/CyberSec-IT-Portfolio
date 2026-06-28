@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
 import { fmtUSD, fmt } from "@/lib/calc";
-import imageOverrides from "@/public/lootbox-image-overrides.json";
 
 export const revalidate = 3600;
 
@@ -17,7 +16,6 @@ export default async function LootboxDetailPage({ params }: Props) {
   const box = await getLootbox(id);
   if (!box) notFound();
 
-  const boxImage = (imageOverrides as Record<string, string>)[id] ?? box.image;
   const ev = calcEV(box.drops);
   const rtp = calcRTP(box.drops, box.price);
   const houseEdge = 100 - rtp;
@@ -46,7 +44,7 @@ export default async function LootboxDetailPage({ params }: Props) {
         style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
       >
         <div className="relative w-28 h-28 shrink-0 rounded-xl overflow-hidden" style={{ background: "#0a0a14" }}>
-          <Image src={boxImage} alt={box.name} fill className="object-contain p-2" unoptimized />
+          <Image src={box.image} alt={box.name} fill className="object-contain p-2" unoptimized />
         </div>
         <div className="flex flex-col gap-2 flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>

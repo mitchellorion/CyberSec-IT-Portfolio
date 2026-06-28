@@ -43,10 +43,6 @@ export async function getLootbox(id: string): Promise<LootboxDetail | null> {
   return res.json();
 }
 
-export function customImage(id: string, overrides: Record<string, string>): string | null {
-  return overrides[id] ?? null;
-}
-
 export function calcEV(drops: Drop[]): number {
   return drops.reduce((sum, d) => sum + d.price * (d.drop / 100), 0);
 }
