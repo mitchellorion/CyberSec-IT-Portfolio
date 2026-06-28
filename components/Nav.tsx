@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Trophy, Zap } from "lucide-react";
+import { BarChart3, Trophy, Package, Zap } from "lucide-react";
 
 const links = [
   { href: "/", label: "Calculator", icon: BarChart3 },
+  { href: "/lootboxes", label: "Lootboxes", icon: Package },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
