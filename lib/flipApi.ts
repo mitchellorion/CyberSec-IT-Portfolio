@@ -51,6 +51,47 @@ export async function getLootbox(id: string): Promise<LootboxDetail | null> {
   return res.json();
 }
 
+export interface CommunityBoxSummary {
+  _id: string;
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  drops: { id: string; chance: number }[];
+  timesWagered: number;
+  timesWageredTwoWeeks: number;
+  riskPercentage: number;
+  created: string;
+  user: string;
+  commission: number;
+  deleted: boolean;
+}
+
+export interface CommunityBoxesResponse {
+  lootboxes: CommunityBoxSummary[];
+  maxPages: number;
+}
+
+export async function getCommunityLootboxes(
+  page: number,
+  pageSize = 20,
+  search = "",
+  riskRange = [0, 100],
+  sorting = "newest"
+): Promise<CommunityBoxesResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    search,
+    sorting,
+  });
+  params.append("riskRange[]", String(riskRange[0]));
+  params.append("riskRange[]", String(riskRange[1]));
+  const res = await fetch(`${API}/lootbox/community?${params}`);
+  if (!res.ok) throw new Error("Failed to fetch community lootboxes");
+  return res.json();
+}
+
 export function calcEV(drops: Drop[]): number {
   return drops.reduce((sum, d) => sum + d.price * (d.drop / 100), 0);
 }
