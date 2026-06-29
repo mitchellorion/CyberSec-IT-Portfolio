@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Search, ChevronLeft, ChevronRight,
-  Users, AlertTriangle, ChevronDown, ChevronUp, Loader2,
+  Users, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
-  getCommunityLootboxes, getLootbox,
-  type CommunityBoxSummary, type LootboxDetail,
-  calcEV, calcRTP,
+  getCommunityLootboxes,
+  type CommunityBoxSummary,
 } from "@/lib/flipApi";
-import { fmtUSD, fmt } from "@/lib/calc";
+import { fmtUSD } from "@/lib/calc";
 import coversJson from "@/public/community-covers.json";
 
 const covers = coversJson as string[];
@@ -41,84 +41,14 @@ function riskColor(r: number) {
   return r > 60 ? "var(--red)" : r > 35 ? "#f59e0b" : "var(--green)";
 }
 
-function DropDetail({ id }: { id: string }) {
-  const [box, setBox] = useState<LootboxDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getLootbox(id).then((b) => { setBox(b); setLoading(false); });
-  }, [id]);
-
-  if (loading) return (
-    <div className="flex justify-center py-6">
-      <Loader2 size={18} className="animate-spin" style={{ color: "var(--text-muted)" }} />
-    </div>
-  );
-  if (!box) return (
-    <p className="text-xs py-4 text-center" style={{ color: "var(--text-muted)" }}>
-      Could not load drop data.
-    </p>
-  );
-
-  const ev = calcEV(box.drops);
-  const rtp = calcRTP(box.drops, box.price);
-
-  return (
-    <div className="px-4 pb-4 flex flex-col gap-3">
-      <div className="flex flex-wrap gap-2">
-        {[
-          { label: "Expected Value", value: fmtUSD(ev), color: ev >= box.price ? "var(--green)" : "var(--red)" },
-          { label: "RTP", value: `${fmt(rtp)}%`, color: rtp >= 96.5 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)" },
-          { label: "House Edge", value: `${fmt(100 - rtp)}%`, color: "var(--text-secondary)" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-lg px-3 py-2 text-xs flex flex-col gap-0.5"
-            style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
-            <span style={{ color: "var(--text-muted)" }}>{label}</span>
-            <span className="font-bold text-sm" style={{ color }}>{value}</span>
-          </div>
-        ))}
-      </div>
-      <div className="rounded-lg overflow-x-auto" style={{ border: "1px solid var(--border)" }}>
-        <table className="w-full text-xs">
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}>
-              {["Item", "Value", "Odds", "EV Contrib"].map((h) => (
-                <th key={h} className="text-left px-3 py-2 font-medium" style={{ color: "var(--text-muted)" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {box.drops.slice().sort((a, b) => b.price - a.price).map((drop) => (
-              <tr key={drop.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-6 h-6 rounded shrink-0" style={{ background: "#0a0a14" }}>
-                      <Image src={drop.image} alt={drop.name} fill className="object-contain p-0.5" unoptimized />
-                    </div>
-                    <span style={{ color: drop.drop < 1 ? "#f59e0b" : "var(--text-primary)" }}>{drop.name}</span>
-                  </div>
-                </td>
-                <td className="px-3 py-2 font-semibold" style={{ color: "var(--green)" }}>{fmtUSD(drop.price)}</td>
-                <td className="px-3 py-2" style={{ color: "var(--text-secondary)" }}>{fmt(drop.drop)}%</td>
-                <td className="px-3 py-2" style={{ color: "var(--text-muted)" }}>{fmtUSD(drop.price * (drop.drop / 100))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 function BoxCard({ box }: { box: CommunityBoxSummary }) {
-  const [expanded, setExpanded] = useState(false);
   const cover = coverFor(box._id, box.image);
 
   return (
-    <div className="rounded-xl overflow-hidden flex flex-col"
+    <Link href={`/lootboxes/${box.id}`}
+      className="rounded-xl overflow-hidden flex flex-col transition-colors hover:border-purple-700"
       style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-      <div className="relative w-full h-28 cursor-pointer" style={{ background: "#0a0a14" }}
-        onClick={() => setExpanded((v) => !v)}>
+      <div className="relative w-full h-28" style={{ background: "#0a0a14" }}>
         <Image src={cover} alt={box.name} fill className="object-cover opacity-70" unoptimized />
         <div className="absolute inset-0"
           style={{ background: "linear-gradient(to top, #0a0a14 0%, transparent 60%)" }} />
@@ -140,8 +70,7 @@ function BoxCard({ box }: { box: CommunityBoxSummary }) {
         </div>
       </div>
 
-      <div className="px-2.5 py-2 flex items-center justify-between gap-1 text-xs cursor-pointer"
-        onClick={() => setExpanded((v) => !v)}>
+      <div className="px-2.5 py-2 flex items-center justify-between gap-1 text-xs">
         <div className="flex flex-col gap-0.5">
           <span className="font-bold text-sm" style={{ color: "var(--accent-bright)" }}>{fmtUSD(box.price)}</span>
           <span style={{ color: "var(--text-muted)" }}>{box.drops.length} items</span>
@@ -152,13 +81,8 @@ function BoxCard({ box }: { box: CommunityBoxSummary }) {
           )}
           <span style={{ color: "var(--text-muted)" }}>{timeAgo(box.created)}</span>
         </div>
-        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </span>
       </div>
-
-      {expanded && <DropDetail id={box.id} />}
-    </div>
+    </Link>
   );
 }
 
