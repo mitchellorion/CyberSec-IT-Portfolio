@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Trophy, Package, Zap, Users } from "lucide-react";
+import { BarChart3, Trophy, Package, Zap, Users, Layers } from "lucide-react";
 
 const links = [
   { href: "/", label: "Calculator", icon: BarChart3 },
   { href: "/lootboxes", label: "Lootboxes", icon: Package },
   { href: "/community", label: "Community", icon: Users },
+  { href: "/games", label: "Games", icon: Layers },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
