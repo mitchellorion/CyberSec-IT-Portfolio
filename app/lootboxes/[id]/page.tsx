@@ -92,7 +92,7 @@ export default async function LootboxDetailPage({ params }: Props) {
         {[
           { label: "Cost to Open", value: fmtUSD(box.price), icon: Package, color: "var(--cyan)" },
           { label: "Expected Value", value: fmtUSD(ev), icon: isPositiveRTP ? TrendingUp : TrendingDown, color: isPositiveRTP ? "var(--green)" : "var(--red)" },
-          { label: "RTP", value: `${fmt(rtp)}%`, icon: TrendingUp, color: rtp >= 97 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)" },
+          { label: "RTP", value: `${fmt(rtp)}%`, icon: TrendingUp, color: rtp >= 96.5 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)" },
           { label: "House Edge", value: `${fmt(houseEdge)}%`, icon: AlertTriangle, color: "var(--text-secondary)" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div
@@ -123,7 +123,7 @@ export default async function LootboxDetailPage({ params }: Props) {
             className="h-full rounded-full"
             style={{
               width: `${Math.min(rtp, 100)}%`,
-              background: rtp >= 97 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)",
+              background: rtp >= 96.5 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)",
             }}
           />
         </div>

@@ -221,7 +221,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col gap-3">
               {[
-                { label: "Your RTP", value: `${fmt(calc.rtp)}%`, color: calc.rtp >= 97 ? "var(--green)" : "var(--text-primary)" },
+                { label: "Your RTP", value: `${fmt(calc.rtp)}%`, color: calc.rtp >= 96.5 ? "var(--green)" : "var(--text-primary)" },
                 { label: "Your House Edge", value: `${fmt(calc.houseEdge)}%`, color: "var(--text-primary)" },
                 { label: "flip.gg Expected Edge", value: `~${calc.flipHouseEdge}%`, color: "var(--text-muted)" },
                 {

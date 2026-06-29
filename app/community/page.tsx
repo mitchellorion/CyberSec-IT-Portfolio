@@ -68,7 +68,7 @@ function DropDetail({ id }: { id: string }) {
       <div className="flex flex-wrap gap-2">
         {[
           { label: "Expected Value", value: fmtUSD(ev), color: ev >= box.price ? "var(--green)" : "var(--red)" },
-          { label: "RTP", value: `${fmt(rtp)}%`, color: rtp >= 97 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)" },
+          { label: "RTP", value: `${fmt(rtp)}%`, color: rtp >= 96.5 ? "var(--green)" : rtp >= 90 ? "#f59e0b" : "var(--red)" },
           { label: "House Edge", value: `${fmt(100 - rtp)}%`, color: "var(--text-secondary)" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-lg px-3 py-2 text-xs flex flex-col gap-0.5"
