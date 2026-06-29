@@ -1,6 +1,7 @@
-// In the browser during dev, route through the local proxy rewrite to bypass CORS.
+// Server-side fetches hit flip.gg directly; browser fetches use the local proxy route
+// to bypass CORS (works in Next.js dev server and on Cloudflare Pages via API route).
 const API =
-  typeof window !== "undefined" && process.env.NODE_ENV === "development"
+  typeof window !== "undefined"
     ? "/api/flip-proxy"
     : "https://api.flip.gg/api";
 

@@ -1,0 +1,4 @@
+name = "flipstats"
+pages_build_output_dir = ".open-next/assets"
+compatibility_date = "2025-09-20"
+compatibility_flags = ["nodejs_compat"]
