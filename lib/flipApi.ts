@@ -1,4 +1,8 @@
-const API = "https://api.flip.gg/api";
+// In the browser during dev, route through the local proxy rewrite to bypass CORS.
+const API =
+  typeof window !== "undefined" && process.env.NODE_ENV === "development"
+    ? "/api/flip-proxy"
+    : "https://api.flip.gg/api";
 
 export interface LootboxSummary {
   _id: string;
