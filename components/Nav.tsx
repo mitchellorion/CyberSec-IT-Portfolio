@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3, Trophy, Package, Zap, Users, Layers,
-  MessageSquare, User as UserIcon, ShieldCheck,
+  MessageSquare, User as UserIcon, ShieldCheck, Gem,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
@@ -13,6 +13,7 @@ const links = [
   { href: "/lootboxes", label: "Lootboxes", icon: Package },
   { href: "/community", label: "Community", icon: Users },
   { href: "/games", label: "Games", icon: Layers },
+  { href: "/levels", label: "Levels", icon: Gem },
   { href: "/forum", label: "Forum", icon: MessageSquare },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];

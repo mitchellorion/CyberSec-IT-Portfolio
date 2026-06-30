@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   calculate,
   fmtUSD,
@@ -9,6 +10,7 @@ import {
   type StatsInput,
 } from "@/lib/calc";
 import { saveStats, loadStats, clearStats } from "@/lib/storage";
+import { levelProgress, totalBonusUnlocked, estimatedRakeback } from "@/lib/levels";
 import {
   TrendingUp,
   TrendingDown,
@@ -22,6 +24,8 @@ import {
   BarChart3,
   Percent,
   Edit3,
+  Gem,
+  ArrowRight,
 } from "lucide-react";
 
 const EMPTY: StatsInput = {
@@ -118,6 +122,8 @@ export default function HomePage() {
 
   const calc = submitted ? calculate(form) : null;
   const isProfit = calc && calc.profit >= 0;
+  const lvl = levelProgress(form.totalWagered);
+  const lvlBonus = totalBonusUnlocked(form.totalWagered);
 
   if (submitted && !editing && calc) {
     return (
@@ -206,6 +212,64 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
+        {/* Level & rewards */}
+        <Link
+          href="/levels"
+          className="rounded-2xl p-5 flex flex-col gap-4 transition-colors hover:border-purple-700"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Gem size={15} style={{ color: lvl.current?.color ?? "var(--accent-bright)" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                flip.gg Level
+              </h2>
+            </div>
+            <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              View all tiers <ArrowRight size={11} />
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Current tier</div>
+              <div className="text-lg font-bold" style={{ color: lvl.current?.color ?? "var(--text-muted)" }}>
+                {lvl.current?.name ?? "Unranked"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Bonuses unlocked</div>
+              <div className="text-lg font-bold" style={{ color: "var(--green)" }}>{fmtCompact(lvlBonus)}</div>
+            </div>
+            <div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Est. rakeback</div>
+              <div className="text-lg font-bold" style={{ color: "var(--cyan)" }}>
+                {fmtCompact(estimatedRakeback(form.totalWagered, 15))}
+              </div>
+            </div>
+          </div>
+
+          {lvl.next ? (
+            <div>
+              <div className="flex justify-between text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>
+                <span>{lvl.current?.name ?? "Unranked"}</span>
+                <span>
+                  {fmtCompact(lvl.remaining)} to{" "}
+                  <span style={{ color: lvl.next.color }}>{lvl.next.name}</span>
+                </span>
+              </div>
+              <div className="h-2 rounded-full" style={{ background: "var(--border)" }}>
+                <div className="h-full rounded-full transition-all"
+                  style={{ width: `${lvl.pct}%`, background: lvl.next.color }} />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold" style={{ color: "var(--accent-bright)" }}>
+              Max tier reached — Elite Gem Master. 👑
+            </p>
+          )}
+        </Link>
 
         {/* RTP & House Edge */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
