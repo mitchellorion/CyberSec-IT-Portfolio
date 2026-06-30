@@ -1,15 +1,9 @@
 "use client";
 
-// ---------------------------------------------------------------------------
-// Client-side account system (localStorage-backed).
-//
-// This site ships as a static export (GitHub Pages) + a Cloudflare Worker that
-// only proxies the flip.gg API — there is no application database. So accounts
-// live in the visitor's browser. This is a demo auth layer, NOT real security:
-// passwords are lightly hashed for obfuscation only. To make accounts shared
-// across devices, swap the read/write helpers here for calls to a backend
-// (e.g. Cloudflare D1 / KV behind the Worker) and keep the same context API.
-// ---------------------------------------------------------------------------
+// Auth context. Delegates all reads/writes to the unified data layer (lib/store),
+// which uses the shared Cloudflare KV backend when available and falls back to
+// localStorage otherwise. This component only holds the session token + the
+// current user, and exposes async actions to the UI.
 
 import {
   createContext,
@@ -19,194 +13,112 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { PublicAccount } from "./models";
+import { store } from "./store";
 
-const ACCOUNTS_KEY = "flipstats_accounts";
 const SESSION_KEY = "flipstats_session";
-
-export interface Account {
-  id: string;
-  username: string;
-  passwordHash: string;
-  flipUID: string;        // user's flip.gg UID, used to match/claim community boxes
-  claimedBoxes: string[]; // community box ids the user has claimed
-  bio: string;
-  createdAt: string;
-}
-
-/** Public view of an account (never expose the password hash to UI code). */
-export type PublicAccount = Omit<Account, "passwordHash">;
 
 interface AuthContextValue {
   user: PublicAccount | null;
+  ready: boolean;
+  /** Session token — pass to lib/store actions that require auth (e.g. forum posts). */
+  token: string;
   /** A user is a "verified creator" (VIP) once they've claimed a box. */
   isVIP: boolean;
-  signup: (username: string, password: string) => { ok: boolean; error?: string };
-  login: (username: string, password: string) => { ok: boolean; error?: string };
+  signup: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (patch: Partial<Pick<Account, "flipUID" | "bio">>) => void;
-  claimBox: (boxId: string) => void;
-  unclaimBox: (boxId: string) => void;
+  updateProfile: (patch: { flipUID?: string; bio?: string }) => Promise<void>;
+  claimBox: (boxId: string) => Promise<void>;
+  unclaimBox: (boxId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// --- tiny, non-cryptographic hash (demo obfuscation only) -------------------
-function hashPassword(pw: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < pw.length; i++) {
-    h ^= pw.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  // mix in length so trivially-short collisions are less likely
-  return (h >>> 0).toString(16) + ":" + pw.length.toString(16);
+function readToken(): string {
+  try { return localStorage.getItem(SESSION_KEY) ?? ""; } catch { return ""; }
 }
-
-function readAccounts(): Account[] {
-  try {
-    const raw = localStorage.getItem(ACCOUNTS_KEY);
-    return raw ? (JSON.parse(raw) as Account[]) : [];
-  } catch {
-    return [];
-  }
+function writeToken(token: string): void {
+  try { localStorage.setItem(SESSION_KEY, token); } catch {}
 }
-
-function writeAccounts(accounts: Account[]): void {
-  try {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-  } catch {}
-}
-
-function strip(a: Account): PublicAccount {
-  const { passwordHash: _ignored, ...rest } = a;
-  void _ignored;
-  return rest;
+function clearToken(): void {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<PublicAccount | null>(null);
+  const [token, setToken] = useState("");
   const [ready, setReady] = useState(false);
 
   // hydrate the session on mount
   useEffect(() => {
-    try {
-      const sid = localStorage.getItem(SESSION_KEY);
-      if (sid) {
-        const acc = readAccounts().find((a) => a.id === sid);
-        if (acc) setUser(strip(acc));
-      }
-    } catch {}
-    setReady(true);
+    let alive = true;
+    const t = readToken();
+    if (!t) { setReady(true); return; }
+    setToken(t);
+    store.me(t)
+      .then((u) => { if (alive) setUser(u); })
+      .catch(() => {})
+      .finally(() => { if (alive) setReady(true); });
+    return () => { alive = false; };
   }, []);
 
-  const persistUser = useCallback((acc: Account) => {
-    const accounts = readAccounts();
-    const idx = accounts.findIndex((a) => a.id === acc.id);
-    if (idx >= 0) accounts[idx] = acc;
-    else accounts.push(acc);
-    writeAccounts(accounts);
-    setUser(strip(acc));
-  }, []);
-
-  const signup = useCallback<AuthContextValue["signup"]>((username, password) => {
-    const name = username.trim();
-    if (name.length < 3) return { ok: false, error: "Username must be at least 3 characters." };
-    if (password.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
-    const accounts = readAccounts();
-    if (accounts.some((a) => a.username.toLowerCase() === name.toLowerCase())) {
-      return { ok: false, error: "That username is already taken." };
+  const signup = useCallback<AuthContextValue["signup"]>(async (username, password) => {
+    const res = await store.signup(username, password);
+    if (res.ok && res.token && res.user) {
+      writeToken(res.token);
+      setToken(res.token);
+      setUser(res.user);
+      return { ok: true };
     }
-    const acc: Account = {
-      id: crypto.randomUUID(),
-      username: name,
-      passwordHash: hashPassword(password),
-      flipUID: "",
-      claimedBoxes: [],
-      bio: "",
-      createdAt: new Date().toISOString(),
-    };
-    accounts.push(acc);
-    writeAccounts(accounts);
-    try {
-      localStorage.setItem(SESSION_KEY, acc.id);
-    } catch {}
-    setUser(strip(acc));
-    return { ok: true };
+    return { ok: false, error: res.error };
   }, []);
 
-  const login = useCallback<AuthContextValue["login"]>((username, password) => {
-    const acc = readAccounts().find(
-      (a) => a.username.toLowerCase() === username.trim().toLowerCase()
-    );
-    if (!acc) return { ok: false, error: "No account with that username." };
-    if (acc.passwordHash !== hashPassword(password)) {
-      return { ok: false, error: "Incorrect password." };
+  const login = useCallback<AuthContextValue["login"]>(async (username, password) => {
+    const res = await store.login(username, password);
+    if (res.ok && res.token && res.user) {
+      writeToken(res.token);
+      setToken(res.token);
+      setUser(res.user);
+      return { ok: true };
     }
-    try {
-      localStorage.setItem(SESSION_KEY, acc.id);
-    } catch {}
-    setUser(strip(acc));
-    return { ok: true };
+    return { ok: false, error: res.error };
   }, []);
 
   const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {}
+    clearToken();
+    setToken("");
     setUser(null);
   }, []);
 
-  const updateProfile = useCallback<AuthContextValue["updateProfile"]>(
-    (patch) => {
-      if (!user) return;
-      const acc = readAccounts().find((a) => a.id === user.id);
-      if (!acc) return;
-      persistUser({ ...acc, ...patch });
-    },
-    [user, persistUser]
-  );
+  const updateProfile = useCallback<AuthContextValue["updateProfile"]>(async (patch) => {
+    if (!token) return;
+    const u = await store.updateProfile(token, patch);
+    if (u) setUser(u);
+  }, [token]);
 
-  const claimBox = useCallback<AuthContextValue["claimBox"]>(
-    (boxId) => {
-      if (!user) return;
-      const acc = readAccounts().find((a) => a.id === user.id);
-      if (!acc) return;
-      if (acc.claimedBoxes.includes(boxId)) return;
-      persistUser({ ...acc, claimedBoxes: [...acc.claimedBoxes, boxId] });
-    },
-    [user, persistUser]
-  );
+  const claimBox = useCallback<AuthContextValue["claimBox"]>(async (boxId) => {
+    if (!token) return;
+    const u = await store.claim(token, boxId);
+    if (u) setUser(u);
+  }, [token]);
 
-  const unclaimBox = useCallback<AuthContextValue["unclaimBox"]>(
-    (boxId) => {
-      if (!user) return;
-      const acc = readAccounts().find((a) => a.id === user.id);
-      if (!acc) return;
-      persistUser({
-        ...acc,
-        claimedBoxes: acc.claimedBoxes.filter((id) => id !== boxId),
-      });
-    },
-    [user, persistUser]
-  );
+  const unclaimBox = useCallback<AuthContextValue["unclaimBox"]>(async (boxId) => {
+    if (!token) return;
+    const u = await store.unclaim(token, boxId);
+    if (u) setUser(u);
+  }, [token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      ready,
+      token,
       isVIP: !!user && user.claimedBoxes.length > 0,
-      signup,
-      login,
-      logout,
-      updateProfile,
-      claimBox,
-      unclaimBox,
+      signup, login, logout, updateProfile, claimBox, unclaimBox,
     }),
-    [user, signup, login, logout, updateProfile, claimBox, unclaimBox]
+    [user, ready, token, signup, login, logout, updateProfile, claimBox, unclaimBox]
   );
-
-  // avoid a flash of logged-out UI before hydration completes
-  if (!ready) {
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

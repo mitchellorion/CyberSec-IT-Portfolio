@@ -6,3 +6,15 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
+
+# Small KV-backed backend for accounts, forum posts, and box claims.
+#
+# Left commented so the Worker still deploys as-is (the app falls back to
+# localStorage when the binding is absent — same behaviour as the GitHub Pages
+# static build). To turn the shared backend ON:
+#   1. npx wrangler kv namespace create FLIPSTATS_KV
+#   2. paste the printed id below and uncomment this block
+#   3. redeploy (npm run build:cf && wrangler deploy, or your CI)
+# [[kv_namespaces]]
+# binding = "FLIPSTATS_KV"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"

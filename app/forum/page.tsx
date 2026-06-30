@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   MessageSquare, Plus, Lock, ShieldCheck, ArrowLeft,
-  Trash2, CornerDownRight, Send,
+  Trash2, CornerDownRight, Send, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import {
-  CATEGORIES, type CategoryId, type Post,
-  getPostsByCategory, getPost, addPost, addReply, deletePost,
-} from "@/lib/forum";
+import { store } from "@/lib/store";
+import { CATEGORIES, type CategoryId, type Post } from "@/lib/models";
 
 function timeAgo(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -24,27 +22,40 @@ function timeAgo(iso: string): string {
 }
 
 export default function ForumPage() {
-  const { user, isVIP } = useAuth();
+  const { isVIP } = useAuth();
   const [category, setCategory] = useState<CategoryId>("general");
   const [openPostId, setOpenPostId] = useState<string | null>(null);
-  // bump to force re-read from storage after writes
-  const [version, setVersion] = useState(0);
-  const refresh = () => setVersion((v) => v + 1);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    const all = await store.listPosts();
+    setPosts(all);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    store.listPosts()
+      .then((all) => { if (alive) setPosts(all); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
 
   const activeCat = CATEGORIES.find((c) => c.id === category)!;
   const locked = activeCat.vipOnly && !isVIP;
-
-  const posts = useMemo(
-    () => (locked ? [] : getPostsByCategory(category)),
-    [category, version, locked]
+  const categoryPosts = useMemo(
+    () => posts.filter((p) => p.category === category),
+    [posts, category]
   );
   const openPost = useMemo(
-    () => (openPostId ? getPost(openPostId) : undefined),
-    [openPostId, version]
+    () => posts.find((p) => p.id === openPostId),
+    [posts, openPostId]
   );
 
-  // leaving a category closes any open thread
-  useEffect(() => { setOpenPostId(null); }, [category]);
+  const selectCategory = (id: CategoryId) => {
+    setCategory(id);
+    setOpenPostId(null);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,7 +65,7 @@ export default function ForumPage() {
           Forum
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-          Community discussion · posts are stored locally in your browser
+          Community discussion · General, Vent, Big Wins, and VIP
         </p>
       </div>
 
@@ -65,7 +76,7 @@ export default function ForumPage() {
           return (
             <button
               key={c.id}
-              onClick={() => setCategory(c.id)}
+              onClick={() => selectCategory(c.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
               style={{
                 background: active ? "var(--accent)" : "var(--bg-card)",
@@ -80,13 +91,8 @@ export default function ForumPage() {
         })}
       </div>
 
-      {/* thread view vs list view */}
       {openPost ? (
-        <ThreadView
-          post={openPost}
-          onBack={() => setOpenPostId(null)}
-          onChange={refresh}
-        />
+        <ThreadView post={openPost} onBack={() => setOpenPostId(null)} onChange={reload} />
       ) : (
         <>
           <p className="text-sm -mt-2" style={{ color: "var(--text-muted)" }}>{activeCat.desc}</p>
@@ -113,31 +119,19 @@ export default function ForumPage() {
             </div>
           ) : (
             <>
-              {user ? (
-                <Composer category={category} onPosted={refresh} />
-              ) : (
-                <div
-                  className="rounded-xl p-4 text-sm flex items-center justify-between gap-3"
-                  style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
-                >
-                  <span style={{ color: "var(--text-muted)" }}>Sign in to start a thread.</span>
-                  <Link
-                    href="/account"
-                    className="px-3 py-1.5 rounded-lg text-sm font-semibold shrink-0"
-                    style={{ background: "var(--accent)", color: "#fff" }}
-                  >
-                    Sign in
-                  </Link>
-                </div>
-              )}
+              <Composer category={category} onPosted={reload} />
 
-              <div className="flex flex-col gap-3">
-                {posts.length === 0 ? (
-                  <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
-                    No threads here yet. Be the first to post.
-                  </p>
-                ) : (
-                  posts.map((p) => (
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 size={26} className="animate-spin" style={{ color: "var(--text-muted)" }} />
+                </div>
+              ) : categoryPosts.length === 0 ? (
+                <p className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  No threads here yet. Be the first to post.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {categoryPosts.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => setOpenPostId(p.id)}
@@ -162,9 +156,9 @@ export default function ForumPage() {
                         </span>
                       </div>
                     </button>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </>
@@ -175,23 +169,40 @@ export default function ForumPage() {
 
 // ---------------------------------------------------------------------------
 function Composer({ category, onPosted }: { category: CategoryId; onPosted: () => void }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  if (!user) {
+    return (
+      <div
+        className="rounded-xl p-4 text-sm flex items-center justify-between gap-3"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+      >
+        <span style={{ color: "var(--text-muted)" }}>Sign in to start a thread.</span>
+        <Link
+          href="/account"
+          className="px-3 py-1.5 rounded-lg text-sm font-semibold shrink-0"
+          style={{ background: "var(--accent)", color: "#fff" }}
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !title.trim() || !body.trim()) return;
-    addPost({
-      category,
-      authorId: user.id,
-      author: user.username,
-      title: title.trim(),
-      body: body.trim(),
-    });
-    setTitle(""); setBody(""); setOpen(false);
-    onPosted();
+    if (!title.trim() || !body.trim() || busy) return;
+    setBusy(true);
+    const post = await store.addPost(token, { category, title: title.trim(), body: body.trim() });
+    setBusy(false);
+    if (post) {
+      setTitle(""); setBody(""); setOpen(false);
+      onPosted();
+    }
   };
 
   if (!open) {
@@ -226,11 +237,11 @@ function Composer({ category, onPosted }: { category: CategoryId; onPosted: () =
       />
       <div className="flex items-center gap-2">
         <button
-          type="submit" disabled={!title.trim() || !body.trim()}
+          type="submit" disabled={!title.trim() || !body.trim() || busy}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
           style={{ background: "var(--accent)", color: "#fff" }}
         >
-          <Send size={14} /> Post
+          <Send size={14} /> {busy ? "Posting…" : "Post"}
         </button>
         <button
           type="button" onClick={() => setOpen(false)}
@@ -248,21 +259,22 @@ function Composer({ category, onPosted }: { category: CategoryId; onPosted: () =
 function ThreadView({
   post, onBack, onChange,
 }: { post: Post; onBack: () => void; onChange: () => void }) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submitReply = (e: React.FormEvent) => {
+  const submitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !reply.trim()) return;
-    addReply(post.id, { authorId: user.id, author: user.username, body: reply.trim() });
-    setReply("");
-    onChange();
+    if (!reply.trim() || busy) return;
+    setBusy(true);
+    const ok = await store.addReply(token, post.id, reply.trim());
+    setBusy(false);
+    if (ok) { setReply(""); onChange(); }
   };
 
-  const remove = () => {
-    deletePost(post.id);
-    onBack();
-    onChange();
+  const remove = async () => {
+    const ok = await store.deletePost(token, post.id);
+    if (ok) { onBack(); onChange(); }
   };
 
   return (
@@ -297,7 +309,6 @@ function ThreadView({
         <p className="text-sm mt-2 whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>{post.body}</p>
       </div>
 
-      {/* replies */}
       <div className="flex flex-col gap-3">
         <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
           <MessageSquare size={14} style={{ color: "var(--accent-bright)" }} />
@@ -327,11 +338,11 @@ function ThreadView({
               style={{ background: "#0a0a14", border: "1px solid var(--border-bright)", color: "var(--text-primary)" }}
             />
             <button
-              type="submit" disabled={!reply.trim()}
+              type="submit" disabled={!reply.trim() || busy}
               className="self-start flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
               style={{ background: "var(--accent)", color: "#fff" }}
             >
-              <Send size={14} /> Reply
+              <Send size={14} /> {busy ? "Replying…" : "Reply"}
             </button>
           </form>
         ) : (

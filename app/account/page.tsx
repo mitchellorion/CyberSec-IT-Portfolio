@@ -4,15 +4,23 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   User as UserIcon, ShieldCheck, LogOut, Package,
-  Fingerprint, Save, Check, AlertCircle,
+  Fingerprint, Save, Check, AlertCircle, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   return (
     <div className="max-w-xl mx-auto flex flex-col gap-6">
-      {user ? <Profile /> : <AuthForms />}
+      {!ready ? (
+        <div className="flex justify-center py-20">
+          <Loader2 size={26} className="animate-spin" style={{ color: "var(--text-muted)" }} />
+        </div>
+      ) : user ? (
+        <Profile />
+      ) : (
+        <AuthForms />
+      )}
     </div>
   );
 }
@@ -26,11 +34,15 @@ function AuthForms() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     setError(null);
-    const res = mode === "signup" ? signup(username, password) : login(username, password);
+    setBusy(true);
+    const res = mode === "signup" ? await signup(username, password) : await login(username, password);
+    setBusy(false);
     if (!res.ok) setError(res.error ?? "Something went wrong.");
   };
 
@@ -106,11 +118,11 @@ function AuthForms() {
         )}
 
         <button
-          type="submit"
-          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+          type="submit" disabled={busy}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{ background: "var(--accent)", color: "#fff" }}
         >
-          {mode === "signup" ? "Create account" : "Log in"}
+          {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
         </button>
 
         <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
@@ -130,8 +142,8 @@ function Profile() {
   const [bio, setBio] = useState(user!.bio);
   const [saved, setSaved] = useState(false);
 
-  const save = () => {
-    updateProfile({ flipUID: flipUID.trim(), bio: bio.trim() });
+  const save = async () => {
+    await updateProfile({ flipUID: flipUID.trim(), bio: bio.trim() });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
