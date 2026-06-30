@@ -9,8 +9,8 @@
 // single-key post list is fine; a high-traffic version would shard per-post.
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { Account, PublicAccount, Post, Reply, CategoryId } from "@/lib/models";
-import { SEED_POSTS } from "@/lib/models";
+import type { Account, PublicAccount, Post, Reply, CategoryId, ChatMessage } from "@/lib/models";
+import { SEED_POSTS, CHAT_LIMIT } from "@/lib/models";
 
 // Minimal structural type for the bits of KVNamespace we use — avoids pulling
 // in @cloudflare/workers-types just for this.
@@ -24,6 +24,7 @@ const KEYS = {
   account: (username: string) => `account:${username.toLowerCase()}`,
   session: (token: string) => `session:${token}`,
   posts: "forum:posts",
+  chat: "chat:messages",
 };
 
 export async function getKV(): Promise<KVLike | null> {
@@ -122,4 +123,20 @@ export async function deletePost(kv: KVLike, postId: string, authorId: string): 
   if (!target || target.authorId !== authorId) return false;
   await savePosts(kv, posts.filter((p) => p.id !== postId));
   return true;
+}
+
+// --- chat -------------------------------------------------------------------
+export async function getChat(kv: KVLike): Promise<ChatMessage[]> {
+  const raw = await kv.get(KEYS.chat);
+  return raw ? (JSON.parse(raw) as ChatMessage[]) : [];
+}
+
+export async function addChat(
+  kv: KVLike,
+  input: { authorId: string; author: string; body: string }
+): Promise<ChatMessage> {
+  const msg: ChatMessage = { id: crypto.randomUUID(), ...input, createdAt: new Date().toISOString() };
+  const next = [...(await getChat(kv)), msg].slice(-CHAT_LIMIT);
+  await kv.put(KEYS.chat, JSON.stringify(next));
+  return msg;
 }
