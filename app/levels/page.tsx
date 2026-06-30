@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Gem, Percent, Gift, TrendingUp, ArrowRight } from "lucide-react";
 import {
-  LEVELS, levelIndexForWager, levelProgress,
+  LEVELS, RAKEBACK_PCT, levelIndexForWager, levelProgress,
   totalBonusUnlocked, estimatedRakeback,
 } from "@/lib/levels";
 import { fmtUSD } from "@/lib/calc";
@@ -44,7 +44,7 @@ export default function LevelsPage() {
         {[
           { icon: TrendingUp, title: "Wager requirement", desc: "Your cumulative lifetime wager unlocks each tier — it only ever goes up." },
           { icon: Percent, title: "15% rakeback", desc: "A slice of the house edge on your wagers is returned to you as rakeback at every tier." },
-          { icon: Gift, title: "Level-up bonus", desc: "Each new tier pays a one-time bonus reward, growing fast at the top end." },
+          { icon: Gift, title: "Level-up bonus", desc: "Each new tier unlocks a one-time openable reward case, growing in value at the top end." },
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="rounded-xl p-4 flex flex-col gap-1.5"
             style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
@@ -88,7 +88,7 @@ export default function LevelsPage() {
               <div className="rounded-xl p-4" style={{ background: "#0a0a14", border: "1px solid var(--border)" }}>
                 <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Est. rakeback so far</div>
                 <div className="text-lg font-bold" style={{ color: "var(--cyan)" }}>
-                  {fmtUSD(estimatedRakeback(wager, 15))}
+                  {fmtUSD(estimatedRakeback(wager))}
                 </div>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function LevelsPage() {
                     <td className="px-5 py-3 font-mono" style={{ color: "var(--text-secondary)" }}>
                       ${shortNum(lvl.wager)}
                     </td>
-                    <td className="px-5 py-3" style={{ color: "var(--text-secondary)" }}>{lvl.rakeback}%</td>
+                    <td className="px-5 py-3" style={{ color: "var(--text-secondary)" }}>{RAKEBACK_PCT}%</td>
                     <td className="px-5 py-3 font-semibold" style={{ color: "var(--green)" }}>{fmtUSD(lvl.bonus)}</td>
                   </tr>
                 );
@@ -166,8 +166,8 @@ export default function LevelsPage() {
       </div>
 
       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-        Rakeback figures are estimates (15% of the ~3.5% house edge on your wagers). Tier values are
-        transcribed from flip.gg&apos;s level system; actual rewards are set by flip.gg.
+        Rakeback is an estimate based on flip.gg&apos;s per-tier rate. Tier and reward-case values are
+        sourced from flip.gg&apos;s level system; actual rewards are set by flip.gg.
       </p>
     </div>
   );
