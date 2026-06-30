@@ -246,7 +246,7 @@ export default function HomePage() {
             <div>
               <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Est. rakeback</div>
               <div className="text-lg font-bold" style={{ color: "var(--cyan)" }}>
-                {fmtCompact(estimatedRakeback(form.totalWagered))}
+                {fmtCompact(estimatedRakeback(form.totalWagered, 15))}
               </div>
             </div>
           </div>
