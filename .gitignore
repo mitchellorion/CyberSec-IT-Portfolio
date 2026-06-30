@@ -43,3 +43,6 @@ next-env.d.ts
 # claude local settings (contains tokens)
 .claude/settings.local.json
 .open-next/
+
+# Wrangler local state
+.wrangler/
