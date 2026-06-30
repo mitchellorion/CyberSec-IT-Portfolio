@@ -7,17 +7,17 @@ export interface Level {
 }
 
 export const LEVELS: Level[] = [
-  { name: "Bronze",          wager: 5_000_000,    rakeback: 15, bonus: 25,      color: "#cd7f32" },
-  { name: "Silver",          wager: 23_000_000,   rakeback: 15, bonus: 100,     color: "#c0c0c0" },
-  { name: "Gold",            wager: 100_000_000,  rakeback: 15, bonus: 300,     color: "#ffd700" },
-  { name: "Diamond",         wager: 250_000_000,  rakeback: 15, bonus: 800,     color: "#7fdfff" },
-  { name: "Ruby",            wager: 500_000_000,  rakeback: 15, bonus: 1_200,   color: "#e0115f" },
-  { name: "Emerald",         wager: 1_000_000_000, rakeback: 15, bonus: 2_250,  color: "#50c878" },
-  { name: "Sapphire",        wager: 2_000_000_000, rakeback: 15, bonus: 4_000,  color: "#2f6fed" },
-  { name: "Obsidian",        wager: 5_000_000_000, rakeback: 15, bonus: 8_300,  color: "#6b6b80" },
-  { name: "Gem Wizard",      wager: 25_000_000_000, rakeback: 15, bonus: 30_000, color: "#a855f7" },
-  { name: "Gem Master",      wager: 100_000_000_000, rakeback: 15, bonus: 100_000, color: "#f59e0b" },
-  { name: "Elite Gem Master", wager: 550_000_000_000, rakeback: 15, bonus: 500_000, color: "#ff2d95" },
+  { name: "Bronze",          wager: 5_000,       rakeback: 15, bonus: 25,      color: "#cd7f32" },
+  { name: "Silver",          wager: 23_000,      rakeback: 15, bonus: 100,     color: "#c0c0c0" },
+  { name: "Gold",            wager: 100_000,     rakeback: 15, bonus: 300,     color: "#ffd700" },
+  { name: "Diamond",         wager: 250_000,     rakeback: 15, bonus: 800,     color: "#7fdfff" },
+  { name: "Ruby",            wager: 500_000,     rakeback: 15, bonus: 1_200,   color: "#e0115f" },
+  { name: "Emerald",         wager: 1_000_000,   rakeback: 15, bonus: 2_250,  color: "#50c878" },
+  { name: "Sapphire",        wager: 2_000_000,   rakeback: 15, bonus: 4_000,  color: "#2f6fed" },
+  { name: "Obsidian",        wager: 5_000_000,   rakeback: 15, bonus: 8_300,  color: "#6b6b80" },
+  { name: "Gem Wizard",      wager: 25_000_000,  rakeback: 15, bonus: 30_000, color: "#a855f7" },
+  { name: "Gem Master",      wager: 100_000_000, rakeback: 15, bonus: 100_000, color: "#f59e0b" },
+  { name: "Elite Gem Master", wager: 550_000_000, rakeback: 15, bonus: 500_000, color: "#ff2d95" },
 ];
 
 export const HOUSE_EDGE = 0.035;
