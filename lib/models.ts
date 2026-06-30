@@ -83,3 +83,13 @@ export const SEED_POSTS: Post[] = [
 export function isCategory(value: string): value is CategoryId {
   return (CATEGORY_IDS as string[]).includes(value);
 }
+
+export interface ChatMessage {
+  id: string;
+  authorId: string;
+  author: string;
+  body: string;
+  createdAt: string;
+}
+
+export const CHAT_LIMIT = 100;

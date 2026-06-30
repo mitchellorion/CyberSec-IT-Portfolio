@@ -4,8 +4,8 @@
 // static export, or local dev without a KV binding). Same async interface
 // either way, so UI code never branches on the mode.
 
-import type { PublicAccount, Post, CategoryId } from "./models";
-import { SEED_POSTS } from "./models";
+import type { PublicAccount, Post, CategoryId, ChatMessage } from "./models";
+import { SEED_POSTS, CHAT_LIMIT } from "./models";
 
 export interface AuthResult {
   ok: boolean;
@@ -33,6 +33,7 @@ export function backendAvailable(): Promise<boolean> {
 // ===========================================================================
 const ACCOUNTS_KEY = "flipstats_accounts";
 const POSTS_KEY = "flipstats_forum_posts";
+const CHAT_KEY = "flipstats_chat";
 
 interface LocalAccount extends PublicAccount {
   passwordHash: string;
@@ -79,6 +80,13 @@ function readPosts(): Post[] {
 }
 function writePosts(posts: Post[]): void {
   try { localStorage.setItem(POSTS_KEY, JSON.stringify(posts)); } catch {}
+}
+
+function readChat(): ChatMessage[] {
+  try { return JSON.parse(localStorage.getItem(CHAT_KEY) ?? "[]") as ChatMessage[]; } catch { return []; }
+}
+function writeChat(msgs: ChatMessage[]): void {
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-CHAT_LIMIT))); } catch {}
 }
 
 // ===========================================================================
@@ -263,5 +271,31 @@ export const store = {
     if (!target || target.authorId !== acc.id) return false;
     writePosts(posts.filter((p) => p.id !== postId));
     return true;
+  },
+
+  async listChat(): Promise<ChatMessage[]> {
+    if (await backendAvailable()) {
+      const { status, data } = await apiJson("/api/chat");
+      return status === 200 ? ((data.messages as ChatMessage[]) ?? []) : [];
+    }
+    return readChat();
+  },
+
+  async sendChat(token: string, body: string): Promise<ChatMessage | null> {
+    if (await backendAvailable()) {
+      const { status, data } = await apiJson("/api/chat", { method: "POST", token, body: { body } });
+      return status === 200 ? (data.message as ChatMessage) : null;
+    }
+    const acc = readAccounts().find((a) => a.id === token);
+    if (!acc) return null;
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      authorId: acc.id,
+      author: acc.username,
+      body: body.slice(0, 300),
+      createdAt: new Date().toISOString(),
+    };
+    writeChat([...readChat(), msg]);
+    return msg;
   },
 };
