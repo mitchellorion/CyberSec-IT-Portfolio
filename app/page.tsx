@@ -11,6 +11,7 @@ import {
 } from "@/lib/calc";
 import { saveStats, loadStats, clearStats } from "@/lib/storage";
 import { levelProgress, totalBonusUnlocked, estimatedRakeback } from "@/lib/levels";
+import FeaturedHome from "@/components/FeaturedHome";
 import {
   TrendingUp,
   TrendingDown,
@@ -561,6 +562,8 @@ export default function HomePage() {
           Calculate Stats
         </button>
       </form>
+
+      <FeaturedHome />
     </div>
   );
 }
