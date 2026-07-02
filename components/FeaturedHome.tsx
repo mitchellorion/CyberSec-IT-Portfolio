@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Crown, Fingerprint, ArrowRight } from "lucide-react";
-import { getCommunityLootboxes, type CommunityBoxSummary } from "@/lib/flipApi";
+import { Star, Crown, Fingerprint, ArrowRight, Package } from "lucide-react";
+import {
+  getCommunityLootboxes, getAllLootboxes,
+  type CommunityBoxSummary, type LootboxSummary,
+} from "@/lib/flipApi";
 import { fmtUSD } from "@/lib/calc";
 import coversJson from "@/public/community-covers.json";
+import imageOverridesJson from "@/public/lootbox-image-overrides.json";
 
 const covers = coversJson as string[];
+const imgOverrides = imageOverridesJson as Record<string, string>;
 
 function coverFor(id: string, fallback: string): string {
   if (!covers.length) return fallback;
@@ -22,20 +27,26 @@ function shortUID(uid: string): string {
 }
 
 export default function FeaturedHome() {
-  const [boxes, setBoxes] = useState<CommunityBoxSummary[]>([]);
+  const [officialBoxes, setOfficialBoxes] = useState<LootboxSummary[]>([]);
+  const [communityBoxes, setCommunityBoxes] = useState<CommunityBoxSummary[]>([]);
 
   useEffect(() => {
     let alive = true;
+    getAllLootboxes()
+      .then((data) => {
+        if (!alive) return;
+        const sorted = [...data].sort((a, b) => b.timesWageredTwoWeeks - a.timesWageredTwoWeeks);
+        setOfficialBoxes(sorted.slice(0, 14));
+      })
+      .catch(() => {});
     getCommunityLootboxes(1, 12, "", [0, 100], "popular")
-      .then((d) => { if (alive) setBoxes(d.lootboxes.filter((b) => !b.deleted)); })
+      .then((d) => { if (alive) setCommunityBoxes(d.lootboxes.filter((b) => !b.deleted)); })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
 
-  if (boxes.length === 0) return null;
-
   const counts = new Map<string, CommunityBoxSummary[]>();
-  for (const b of boxes) {
+  for (const b of communityBoxes) {
     if (!b.user) continue;
     counts.set(b.user, [...(counts.get(b.user) ?? []), b]);
   }
@@ -44,20 +55,87 @@ export default function FeaturedHome() {
   for (const [uid, list] of counts) {
     if (list.length > topBoxes.length) { topCreator = uid; topBoxes = list; }
   }
-  const featured = boxes.slice(0, 8);
+  const featuredCommunity = communityBoxes.slice(0, 8);
+
+  if (officialBoxes.length === 0 && communityBoxes.length === 0) return null;
 
   return (
-    <div className="w-full flex flex-col gap-8">
-      {topCreator && (
+    <div className="w-full flex flex-col gap-10">
+
+      {/* ── Featured Lootboxes (official) ── */}
+      {officialBoxes.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Package size={15} style={{ color: "var(--accent-bright)" }} />
+              Featured Lootboxes
+            </h2>
+            <Link href="/lootboxes" className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              See all <ArrowRight size={11} />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            {officialBoxes.map((box) => {
+              const img = imgOverrides[box.id] ?? box.image;
+              return (
+                <Link
+                  key={box.id}
+                  href={`/lootboxes/${box.id}`}
+                  className="shrink-0 w-36 rounded-xl overflow-hidden flex flex-col transition-transform hover:scale-[1.02]"
+                  style={{ background: "var(--bg-card)", border: "1px solid var(--border-bright)" }}
+                >
+                  <div className="relative w-36 h-28" style={{ background: "#0a0a14" }}>
+                    <Image src={img} alt={box.name} fill className="object-contain p-2" unoptimized />
+                    <span
+                      className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded font-semibold"
+                      style={{
+                        fontSize: 10,
+                        color: "#fff",
+                        background: box.riskPercentage > 60
+                          ? "rgba(239,68,68,0.85)"
+                          : box.riskPercentage > 35
+                          ? "rgba(245,158,11,0.85)"
+                          : "rgba(16,185,129,0.85)",
+                      }}
+                    >
+                      {box.riskPercentage.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="px-2.5 py-2 flex flex-col gap-0.5">
+                    <p className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                      {box.name}
+                    </p>
+                    <p className="text-sm font-bold" style={{ color: "var(--accent-bright)" }}>
+                      {fmtUSD(box.price)}
+                    </p>
+                    {box.timesWageredTwoWeeks > 0 && (
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {box.timesWageredTwoWeeks.toLocaleString()} opens / 2w
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Featured Creator ── */}
+      {topCreator && communityBoxes.length > 0 && (
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
             <Crown size={15} style={{ color: "#fbbf24" }} /> Featured Creator
           </h2>
-          <Link href="/community"
+          <Link
+            href="/community"
             className="rounded-2xl p-5 flex items-center gap-4 transition-colors hover:border-purple-700"
-            style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: "var(--accent-glow)", border: "1px solid rgba(124,58,237,0.3)" }}>
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "var(--accent-glow)", border: "1px solid rgba(124,58,237,0.3)" }}
+            >
               <Crown size={26} style={{ color: "#fbbf24" }} />
             </div>
             <div className="flex flex-col gap-0.5 min-w-0">
@@ -74,38 +152,45 @@ export default function FeaturedHome() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Star size={15} style={{ color: "#fbbf24" }} fill="#fbbf24" /> Featured Boxes
-          </h2>
-          <Link href="/community" className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
-            See all <ArrowRight size={11} />
-          </Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          {featured.map((box) => {
-            const cover = coverFor(box._id, box.image);
-            return (
-              <Link key={box._id} href={`/lootboxes/${box.id}`}
-                className="relative shrink-0 w-44 h-32 rounded-xl overflow-hidden flex flex-col justify-end transition-transform hover:scale-[1.02]"
-                style={{ border: "1px solid var(--border-bright)" }}>
-                <Image src={cover} alt={box.name} fill className="object-cover opacity-70" unoptimized />
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0a0a14 10%, transparent 70%)" }} />
-                <div className="relative px-3 pb-2.5">
-                  <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{box.name}</p>
-                  <div className="flex items-center justify-between text-xs mt-0.5">
-                    <span className="font-bold" style={{ color: "var(--accent-bright)" }}>{fmtUSD(box.price)}</span>
-                    {box.timesWagered > 0 && (
-                      <span style={{ color: "var(--text-secondary)" }}>{box.timesWagered.toLocaleString()} opens</span>
-                    )}
+      {/* ── Featured Community Boxes ── */}
+      {featuredCommunity.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Star size={15} style={{ color: "#fbbf24" }} fill="#fbbf24" /> Featured Community Boxes
+            </h2>
+            <Link href="/community" className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              See all <ArrowRight size={11} />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            {featuredCommunity.map((box) => {
+              const cover = coverFor(box._id, box.image);
+              return (
+                <Link
+                  key={box._id}
+                  href={`/lootboxes/${box.id}`}
+                  className="relative shrink-0 w-44 h-32 rounded-xl overflow-hidden flex flex-col justify-end transition-transform hover:scale-[1.02]"
+                  style={{ border: "1px solid var(--border-bright)" }}
+                >
+                  <Image src={cover} alt={box.name} fill className="object-cover opacity-70" unoptimized />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0a0a14 10%, transparent 70%)" }} />
+                  <div className="relative px-3 pb-2.5">
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{box.name}</p>
+                    <div className="flex items-center justify-between text-xs mt-0.5">
+                      <span className="font-bold" style={{ color: "var(--accent-bright)" }}>{fmtUSD(box.price)}</span>
+                      {box.timesWagered > 0 && (
+                        <span style={{ color: "var(--text-secondary)" }}>{box.timesWagered.toLocaleString()} opens</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
