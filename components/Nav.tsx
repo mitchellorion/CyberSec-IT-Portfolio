@@ -35,8 +35,6 @@ export default function Nav() {
   }, []);
   useEffect(() => { setOpen(false); }, [pathname]);
 
-  const current = links.find((l) => l.href === pathname);
-
   return (
     <nav
       style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border)" }}
@@ -61,14 +59,7 @@ export default function Nav() {
                 border: "1px solid var(--border-bright)",
               }}
             >
-              {current ? (
-                <>
-                  <current.icon size={15} style={{ color: "var(--accent-bright)" }} />
-                  <span style={{ color: "var(--text-primary)" }}>{current.label}</span>
-                </>
-              ) : (
-                <span>Browse</span>
-              )}
+              <span>Browse</span>
               <ChevronDown size={14} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
             </button>
 

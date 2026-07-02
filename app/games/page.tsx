@@ -906,21 +906,48 @@ function WheelGame() {
 
 // ── Battles ───────────────────────────────────────────────────────────────────
 
+const BATTLE_FORMATS = [
+  { label: "1v1", players: 2, teamSize: 1 },
+  { label: "1v1v1", players: 3, teamSize: 1 },
+  { label: "1v1v1v1", players: 4, teamSize: 1 },
+  { label: "2v2", players: 4, teamSize: 2 },
+  { label: "3v3", players: 6, teamSize: 3 },
+  { label: "1v1v1v1v1", players: 5, teamSize: 1 },
+] as const;
+
+const BATTLE_MODES = [
+  {
+    id: "normal",
+    label: "Normal",
+    desc: "The highest combined value wins — the winning side takes the entire pot.",
+  },
+  {
+    id: "group",
+    label: "Group",
+    desc: "Same as Normal, but on team formats the pot is split evenly among the winning team's players instead of going to one payout.",
+  },
+  {
+    id: "terminal",
+    label: "Terminal",
+    desc: "Several rounds are played, but only the side that wins the final round takes the pot — earlier rounds don't carry over winnings.",
+  },
+  {
+    id: "jackpot",
+    label: "Jackpot",
+    desc: "Each side's odds are weighted by how much it put into the pot (a spinning wheel) rather than highest-value-wins. With equal stakes per side, the odds work out the same as Normal.",
+  },
+] as const;
+
+type BattleModeId = (typeof BATTLE_MODES)[number]["id"];
+
 function BattlesGame() {
-  const [players, setPlayers] = useState(2);
-  const [winners, setWinners] = useState(1);
+  const [formatIdx, setFormatIdx] = useState(0);
+  const [mode, setMode] = useState<BattleModeId>("normal");
 
-  const effectiveWinners = Math.min(winners, players - 1);
-  const winProb = effectiveWinners / players;
-  const mult = players / effectiveWinners;
-
-  const formats = [
-    { label: "1v1", players: 2, winners: 1 },
-    { label: "1v1v1", players: 3, winners: 1 },
-    { label: "1v1v1v1", players: 4, winners: 1 },
-    { label: "2v2 (top 2)", players: 4, winners: 2 },
-    { label: "3-way (top 2)", players: 3, winners: 2 },
-  ];
+  const format = BATTLE_FORMATS[formatIdx];
+  const winProb = format.teamSize / format.players;
+  const mult = format.players / format.teamSize;
+  const isTeamFormat = format.teamSize > 1;
 
   return (
     <div className="flex flex-col gap-5">
@@ -929,66 +956,65 @@ function BattlesGame() {
           How It Works
         </h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          Multiple players open the same case simultaneously. The player with the{" "}
-          <strong style={{ color: "var(--accent-bright)" }}>highest-value drop</strong> wins all
-          items (or coin equivalent). The house edge is baked into the cases (3.5% RTP loss) —
-          battles don&apos;t add additional edge. In a 1v1 you have ~50% win chance but expected
-          value is the same as opening solo: <strong style={{ color: "var(--red)" }}>−3.5%</strong>
-          .
+          Multiple players open the same case simultaneously. The side with the{" "}
+          <strong style={{ color: "var(--accent-bright)" }}>highest-value drop</strong>{" "}
+          wins the pot — exactly how depends on the game mode (Normal, Group, Terminal, Jackpot).
+          The house edge is baked into the cases (3.5% RTP loss) — battles don&apos;t add
+          additional edge. In a 1v1 you have ~50% win chance but expected value is the same as
+          opening solo:{" "}
+          <strong style={{ color: "var(--red)" }}>−3.5%</strong>.
         </p>
         <div className="grid grid-cols-3 gap-3 mt-4">
           <StatChip label="House Edge" value="3.5% (from cases)" color="var(--red)" />
           <StatChip label="1v1 Win%" value="~50%" color="var(--green)" />
-          <StatChip label="Cursed Mode" value="Loser takes all" color="var(--text-muted)" />
+          <StatChip label="Crazy Mode" value="Loser takes all" color="var(--text-muted)" />
+        </div>
+      </Card>
+
+      <Card title="Game Modes">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {BATTLE_MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className="text-left rounded-xl p-3 flex flex-col gap-1"
+              style={{
+                background: mode === m.id ? "var(--accent-glow)" : "#0a0a14",
+                border: `1px solid ${mode === m.id ? "var(--accent-bright)" : "var(--border)"}`,
+              }}
+            >
+              <span
+                className="text-sm font-semibold"
+                style={{ color: mode === m.id ? "var(--accent-bright)" : "var(--text-primary)" }}
+              >
+                {m.label}
+              </span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{m.desc}</span>
+            </button>
+          ))}
         </div>
       </Card>
 
       <Card title="Battle Odds Calculator">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-xs mb-2 block" style={{ color: "var(--text-muted)" }}>
-              Players
-            </label>
-            <div className="flex gap-1.5">
-              {[2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => {
-                    setPlayers(n);
-                    setWinners(Math.min(winners, n - 1));
-                  }}
-                  className="flex-1 py-1.5 rounded text-xs font-semibold"
-                  style={{
-                    background: players === n ? "var(--accent)" : "#0a0a14",
-                    color: players === n ? "#fff" : "var(--text-secondary)",
-                    border: "1px solid var(--border-bright)",
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs mb-2 block" style={{ color: "var(--text-muted)" }}>
-              Winners
-            </label>
-            <div className="flex gap-1.5">
-              {Array.from({ length: players - 1 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setWinners(n)}
-                  className="flex-1 py-1.5 rounded text-xs font-semibold"
-                  style={{
-                    background: effectiveWinners === n ? "var(--accent)" : "#0a0a14",
-                    color: effectiveWinners === n ? "#fff" : "var(--text-secondary)",
-                    border: "1px solid var(--border-bright)",
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+        <div className="mb-4">
+          <label className="text-xs mb-2 block" style={{ color: "var(--text-muted)" }}>
+            Format
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {BATTLE_FORMATS.map((f, i) => (
+              <button
+                key={f.label}
+                onClick={() => setFormatIdx(i)}
+                className="px-3 py-1.5 rounded text-xs font-semibold"
+                style={{
+                  background: formatIdx === i ? "var(--accent)" : "#0a0a14",
+                  color: formatIdx === i ? "#fff" : "var(--text-secondary)",
+                  border: "1px solid var(--border-bright)",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -1021,6 +1047,12 @@ function BattlesGame() {
             </div>
           </div>
         </div>
+        {isTeamFormat && mode === "group" && (
+          <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+            In Group mode each winning teammate is paid {fmt(mult, 2)}× individually rather than
+            one player holding the whole pot — total winnings per team are unchanged.
+          </p>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1038,7 +1070,7 @@ function BattlesGame() {
               </tr>
             </thead>
             <tbody>
-              {formats.map(({ label, players: p, winners: w }) => {
+              {BATTLE_FORMATS.map(({ label, players: p, teamSize: w }) => {
                 const wp = w / p;
                 const m = p / w;
                 return (
@@ -1069,9 +1101,10 @@ function BattlesGame() {
       <Card title="Key Points">
         <div className="flex flex-col gap-2">
           {[
-            "Battle EV equals opening solo — the format doesn't change expected value, only variance.",
-            "Cursed mode flips win/loss (loser takes all) — EV is identical, variance is the same.",
-            "Team battles split winnings evenly among winners; EV per player stays at −3.5%.",
+            "Battle EV equals opening solo — the format and mode don't change expected value, only variance.",
+            "Crazy mode flips win/loss (loser takes all) — EV is identical, variance is the same.",
+            "Terminal mode only changes when the pot is decided (final round), not the underlying odds.",
+            "Jackpot mode weights odds by stake instead of highest roll — with equal stakes the math matches Normal.",
             "Picking higher-RTP cases for battles reduces the edge just like it does when opening solo.",
           ].map((tip, i) => (
             <div
